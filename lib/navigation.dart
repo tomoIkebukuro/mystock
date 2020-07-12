@@ -12,7 +12,7 @@ import 'load.dart';
 import 'edit_profile.dart';
 import 'forum.dart';
 import 'favorite.dart';
-
+import 'profile.dart';
 //chat
 
 //search
@@ -31,14 +31,14 @@ class NavigationPage extends StatelessWidget{
     Forum(),
     Favorite(),
     Text("2"),
-    Text("3"),
+    MyProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Selector<NavigationModel,int>(
-      selector: (context,model)=>model.index,
-      builder: (context,index,child){
+    return ChangeNotifierProvider(
+      create: (context)=>NavigationModel(),
+      builder: (context,child){
         return Scaffold(
           appBar: AppBar(
             iconTheme: IconThemeData(
@@ -48,30 +48,29 @@ class NavigationPage extends StatelessWidget{
             title: Text("mystock"),
           ),
           body: IndexedStack(
-            index: index,
+            index: context.select<NavigationModel,int>((model)=>model.index),
             children: bodyList,
           ),
           bottomNavigationBar: BottomNavigationBar(
             type: BottomNavigationBarType.fixed,
-
-            currentIndex: index,
+            currentIndex: context.select<NavigationModel,int>((model)=>model.index),
             onTap: (value){context.read<NavigationModel>().index=value;},
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
                 icon: Icon(Icons.forum,),
-                title: Text("A"),
+                title: Text("Forum"),
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.search,),
-                title: Text("B"),
+                title: Text("Search"),
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.favorite,),
-                title: Text("C"),
+                title: Text("Favorite"),
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.person,),
-                title: Text("D"),
+                title: Text("Profile"),
               ),
             ],
           ),

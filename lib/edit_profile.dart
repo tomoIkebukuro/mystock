@@ -12,10 +12,13 @@ import 'package:progress_dialog/progress_dialog.dart';
 import 'package:exif/exif.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
-
+import 'class.dart';
 import 'util_func.dart';
+import 'util/widget.dart';
 
 class EditProfileModel with ChangeNotifier{
+
+  EditProfileModel(this.profile);
 
   //nextAvatarは次に設定するアバター
   //新しく写真を撮るなどしてアバターを変更すると代入される
@@ -27,27 +30,8 @@ class EditProfileModel with ChangeNotifier{
     notifyListeners();
   }
 
+  Profile profile;
 
-  bool _wasSaveButtonPressed=false;
-  get wasSaveButtonPressed => _wasSaveButtonPressed;
-  set wasSaveButtonPressed(value){
-    _wasSaveButtonPressed=value;
-    notifyListeners();
-  }
-
-  bool _wasCameraButtonPressed=false;
-  get wasCameraButtonPressed => _wasCameraButtonPressed;
-  set wasCameraButtonPressed(value){
-    _wasCameraButtonPressed=value;
-    notifyListeners();
-  }
-
-  bool _wasGalleryButtonPressed=false;
-  get wasGalleryButtonPressed => _wasGalleryButtonPressed;
-  set wasGalleryButtonPressed(value){
-    _wasGalleryButtonPressed=value;
-    notifyListeners();
-  }
 }
 
 class EditProfilePage extends StatefulWidget{
@@ -61,23 +45,14 @@ class EditProfilePage extends StatefulWidget{
 class EditProfileState extends State<EditProfilePage>{
 
   //Map<String,Object> nextProfile;
-  TextEditingController nameController=TextEditingController();
-  TextEditingController introductionController=TextEditingController();
+  //Profile originalProfile;
+  //TextEditingController nameController=TextEditingController();
+  //TextEditingController introductionController=TextEditingController();
   //String defaultAvatarUrl;
 
   //Formで使う
   final formKey = GlobalKey<FormState>();
-  Map<String,Object> profile;
-
-  bool isInitialized=false;
-
-  void initialize(BuildContext context){
-    if(!isInitialized){
-      profile??={...context.select<GlobalModel,Map<String,Object>>((model)=>model.myProfile)};
-      nameController.text=profile["name"];
-      introductionController.text=profile["introduction"];
-    }
-  }
+  //Profile profile;
 
   Future<File> cropAvatar(File file) async{
     if(file==null){
@@ -95,192 +70,177 @@ class EditProfileState extends State<EditProfilePage>{
   }
 
   Future<Null> onCameraButtonPressed(BuildContext context)async{
-    context.read<EditProfileModel>().wasCameraButtonPressed=true;
     try{
       context.read<EditProfileModel>().nextAvatar=await cropAvatar(await pickFileFromCamera());
     }catch(e){
       showErrorDialog(context, e.toString());
     }
-    context.read<EditProfileModel>().wasCameraButtonPressed=false;
     return null;
   }
 
   Future<Null> onGalleryButtonPressed(BuildContext context)async{
-    context.read<EditProfileModel>().wasGalleryButtonPressed=true;
     try{
       context.read<EditProfileModel>().nextAvatar=await cropAvatar(await pickFileFromGallery());
     }catch(e){
       showErrorDialog(context, e.toString());
     }
-    context.read<EditProfileModel>().wasGalleryButtonPressed=false;
     return null;
   }
+
+  Future<Null> onSaveButtonPressed(BuildContext context) async{
+
+    //formの内容をチェック
+    if(!formKey.currentState.validate()) {
+      return null;
+    }
+
+    var profile=context.read<EditProfileModel>().profile.clone();
+    profile.name=name;
+    profile.introduction=introduction;
+
+    var avatar=context.read<EditProfileModel>().nextAvatar;
+
+    try{
+      await updateMyProfile(context, profile,avatar );
+    }catch(e){
+    showErrorDialog(context, "");
+    return null;
+    }
+
+    Navigator.of(context).pop();
+  }
+
+  String name;
+  String introduction;
 
   @override
   Widget build(BuildContext context) {
 
-    initialize(context);
+    //initialize(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        iconTheme: IconThemeData(
-          color: Colors.green
-        ),
-        backgroundColor: Colors.white,
-        actions: <Widget>[
-          Container(
-            margin: EdgeInsets.all(10),
-            width: 60,
-            child: Selector<EditProfileModel,bool>(
-              selector: (context,model)=>model.wasSaveButtonPressed,
-              builder: (context,isPressed,child){
-                return RaisedButton(
-                  child: Text('保存',style: TextStyle(fontWeight: FontWeight.bold),),
-                  textColor: Colors.white,
-                  padding: EdgeInsets.all(3),
-                  shape: StadiumBorder(),
-                  onPressed: isPressed ? null :() async {
-
-                    context.read<EditProfileModel>().wasSaveButtonPressed=true;
-
-                    //formの内容をチェック
-                    if(!formKey.currentState.validate()) {
-                      return ;
-                    }
-
-                    //model.nextProfileに保存される
-                    formKey.currentState.save();
-
-                    try{
-                      await updateMyProfile(
-                          context,
-                          profile,
-                          context.read<EditProfileModel>().nextAvatar
-                      );
-                    }catch(e){
-                      showErrorDialog(context, "");
-                      return ;
-                    }
-
-                    Navigator.of(context).pop();
-                  },
-                );
-              },
+    return ChangeNotifierProvider<EditProfileModel>(
+      create: (context) {
+        var profile=context.read<GlobalModel>().myProfile.clone();
+        name=profile.name;
+        introduction=profile.introduction;
+        return EditProfileModel(profile);
+      },
+      builder: (context,child){
+        return Scaffold(
+          appBar: AppBar(
+            iconTheme: IconThemeData(
+                color: Colors.green
             ),
-          )
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: SingleChildScrollView(
-            reverse: false,
-            scrollDirection: Axis.vertical,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children:<Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Selector<EditProfileModel,bool>(
-                        selector: (context,model)=>model.wasCameraButtonPressed,
-                        builder: (context,wasPressed,child){
-                          return FloatingActionButton(
-                            mini: true,
-                            backgroundColor: Colors.greenAccent[400],
-                            child: Icon(Icons.camera_alt,),
-                            onPressed: wasPressed ? null : ()async{
-                              await onCameraButtonPressed(context);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    Container(
-                      height: 100,
-                      width: 100,
-                      child: ClipOval(
-                        child: Selector<EditProfileModel,File>(
-                          selector: (context,model)=>model.nextAvatar,
-                          builder: (context,file,child){
-                            if(file==null){
-                              return ImageNetworkExtended(profile["avatarUrl"]);
-                            }
-                            return Image.file(file);
-                          },
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Selector<EditProfileModel,bool>(
-                        selector: (context,model)=>model.wasGalleryButtonPressed,
-                        builder: (context,wasPressed,child){
-                          return FloatingActionButton(
-                            mini: true,
-                            backgroundColor: Colors.greenAccent[400],
-                            child: Icon(Icons.image,),
-                            onPressed: wasPressed ? null : ()async{
-                              await onGalleryButtonPressed(context);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  height: 20,
-                ),
-                Form(
-                  key: formKey,
+            backgroundColor: Colors.white,
+            actions: <Widget>[
+              RaisedButtonModified(
+                onPressed: ()=>onSaveButtonPressed(context),
+                text: "保存",
+              )
+            ],
+          ),
+          body: Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: SingleChildScrollView(
+                  reverse: false,
+                  scrollDirection: Axis.vertical,
                   child: Column(
-                    children: <Widget>[
-                      TextFormField(
-                        keyboardType: TextInputType.multiline,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: '名前　',
-                        ),
-                        maxLength: 32,
-                        controller: nameController,
-                        validator: (value){
-                          if(value.length==0){
-                            return '名前を入力してください。';
-                          }
-                          return null;
-                        },
-                        onSaved: (value){
-                          profile["name"]=value;
-                        },
-                        autofocus: false,
+                    mainAxisSize: MainAxisSize.min,
+                    children:<Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: IconButton(
+                              icon: Icon(Icons.camera_alt,),
+                              onPressed:  ()async{
+                                await onCameraButtonPressed(context);
+                              },
+                            ),
+                          ),
+                          Selector<EditProfileModel,File>(
+                            selector: (context,model)=>model.nextAvatar,
+                            builder: (context,file,child){
+                              if(file==null){
+                                return NetworkAvatar(
+                                  avatarUrl:context.select<EditProfileModel,String>((model)=>model.profile.avatarUrl),
+                                  size: 100,
+                                );
+                              }
+                              return FileAvatar(
+                                file: file,
+                                size: 100,
+                              );
+                            },
+                          ),
+                          Expanded(
+                            child: IconButton(
+                              icon: Icon(Icons.image,),
+                              onPressed:  ()async{
+                                await onGalleryButtonPressed(context);
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                      TextFormField(
-                        controller: introductionController,
-                        keyboardType: TextInputType.multiline,
-                        autofocus: false,
-                        decoration: InputDecoration(
-                          labelText: '紹介文',
-                          border: OutlineInputBorder(),
-
-                        ),
-                        maxLines: 20,
-                        maxLength: 256,
-                        validator: (value){
-                          if(value.length==0){return '紹介文を入力してください。';}
-                          return null;
-                        },
+                      SizedBox(
+                        height: 20,
+                      ),
+                      Form(
+                        key: formKey,
+                        child: Column(
+                          children: <Widget>[
+                            TextFormField(
+                              keyboardType: TextInputType.multiline,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: '名前　',
+                              ),
+                              maxLength: 32,
+                              //controller: nameController,
+                              initialValue: context.select<EditProfileModel,String>((model) => model.profile.name),
+                              validator: (value){
+                                if(value.length==0){
+                                  return '名前を入力してください。';
+                                }
+                                return null;
+                              },
+                              /*
                         onSaved: (value){
-                          profile["introduction"]=value;
-                        },
+                          profile.name=value;
+                        },*/
+                              autofocus: false,
+                            ),
+                            TextFormField(
+                              initialValue: introduction,
+                              keyboardType: TextInputType.multiline,
+                              autofocus: false,
+                              decoration: InputDecoration(
+                                labelText: '紹介文',
+                                border: OutlineInputBorder(),
+
+                              ),
+                              maxLines: 20,
+                              maxLength: 256,
+                              validator: (value){
+                                if(value.length==0){return '紹介文を入力してください。';}
+                                return null;
+                              },
+                              /*
+                        onSaved: (value){
+                          profile.introduction=value;
+                        },*/
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              )
           ),
-        )
-      ),
+        );
+      },
     );
   }
 }

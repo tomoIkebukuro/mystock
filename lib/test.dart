@@ -18,28 +18,33 @@ class TestModel with ChangeNotifier{
     notifyListeners();
   }
 }
-
+int rcount=0;
 class TestPage extends StatelessWidget{
   @override
   Widget build(BuildContext context) {
+
     return ChangeNotifierProvider(
       create: (context)=>TestModel(),
-      builder:(context,child)=> Scaffold(
-        floatingActionButton: FloatingActionButton(
-          onPressed: (){
-            context.read<TestModel>().count+=1;
-          },
-        ),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(context.select<TestModel,int>((model)=>model.count).toString()),
-              Text(context.select<TestModel,int>((model)=>model.count).toString())
-            ],
+      builder:(context,child){
+        rcount+=1;
+        print(rcount);
+        return Scaffold(
+          floatingActionButton: FloatingActionButton(
+            onPressed: (){
+              context.read<TestModel>().count+=1;
+            },
           ),
-        ),
-      ),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(context.select<TestModel,int>((model)=>model.count).toString()),
+                Text(context.select<TestModel,int>((model)=>model.count).toString()),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

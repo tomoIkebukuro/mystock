@@ -10,6 +10,7 @@ import 'util_widget.dart';
 import 'package:progress_dialog/progress_dialog.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'class.dart';
 
 Future<String> uploadImage({File file,String collectionName,String fileName}) async {
   final StorageReference ref = FirebaseStorage.instance.ref().child(collectionName).child(fileName);
@@ -25,44 +26,34 @@ Future<String> uploadImage({File file,String collectionName,String fileName}) as
   }
 }
 
-Future<Null> uploadProfile(BuildContext context,Map<String,Object> nextProfile,File nextAvatar) async {
+Future<Null> uploadProfile(BuildContext context,Profile profile,File nextAvatar) async {
 
   if (nextAvatar != null) {
-    nextProfile["avatarUrl"] = await uploadImage(
+    profile.avatarUrl = await uploadImage(
         file: nextAvatar,
         collectionName: 'images',
         fileName: "dummy"
     );
   }
-  await Firestore.instance.collection('profile').document(nextProfile["id"]).setData({
-    'introduction': nextProfile["introduction"],
-    'name': nextProfile["name"],
-    'id': nextProfile["id"],
-    'avatarUrl': nextProfile["avatarUrl"],
-    'predictions':(nextProfile["predictions"] as List).join(" "),
-  });
+  await Firestore.instance.collection('profile').document(profile.userId).setData(profile.toData());
 
   return null;
 
 }
 
-Future<Null> updateMyProfile(BuildContext context,Map<String,Object> nextProfile,File nextAvatar)async{
-  await uploadProfile(context, nextProfile, nextAvatar);
-  context.read<GlobalModel>().myProfile=nextProfile;
+Future<Null> updateMyProfile(BuildContext context,Profile profile,File nextAvatar)async{
+  await uploadProfile(context, profile, nextAvatar);
+  context.read<GlobalModel>().myProfile=profile;
   return null;
 }
 
-Future<Map<String,Object>> resetMyProfile(BuildContext context,String id)async{
-  Map<String,Object>initialProfile={
-    'introduction': "",
-    'name': "",
-    'id': id,
-    'avatarUrl': "https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/flutter-512.png",
-    'predictions':[],
-  };
+Future<Profile> resetMyProfile(BuildContext context,String id)async{
+  var initialProfile=Profile.getInitialProfile(id);
   await updateMyProfile(context, initialProfile, null);
   return initialProfile;
 }
+
+
 
 // サーバの状態を取得する関数
 //　そもそもサーバに接続できなければnullを返す
@@ -78,7 +69,7 @@ Future<Map<String,String>> getServerState()async{
 }
 
 //プロフィールを取得
-Future<Map<String,Object>> getProfile(BuildContext context,String uid)async{
+Future<Profile> getProfile(String uid)async{
   DocumentSnapshot snapshot;
 
   snapshot=await Firestore.instance.collection('profile').document(uid).get();
@@ -86,10 +77,7 @@ Future<Map<String,Object>> getProfile(BuildContext context,String uid)async{
   if(snapshot == null || snapshot.exists==false){
     return null;
   }
-  Map<String,Object>profile={...snapshot.data};
-  profile["predictions"]??="";
-  profile["predictions"]=(profile["predictions"] as String).split(" ");
-  return profile;
+  return Profile(snapshot.data);
 }
 
 Future<Null> deleteProfile(BuildContext context,String uid) async{
@@ -124,6 +112,8 @@ Future<File> pickFileFromGallery() async {
 Future<FirebaseUser> loadUser()async{
   return await FirebaseAuth.instance.currentUser();
 }
+
+
 
 void showErrorDialog(BuildContext context,String message){
   showDialog(

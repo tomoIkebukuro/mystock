@@ -11,6 +11,9 @@ import 'global_model.dart';
 
 import 'load.dart';
 import 'edit_profile.dart';
+import 'util/widget.dart';
+
+import 'package:cached_network_image/cached_network_image.dart';
 
 class Forum extends StatelessWidget{
   @override
@@ -87,18 +90,16 @@ class ForumTile extends StatelessWidget{
           children: <Widget>[
             Container(
               height: 60,
-
-
-
               child: Row(
                 children: <Widget>[
                   AspectRatio(
                     aspectRatio: 1,
                     child: GestureDetector(
                       child: ClipOval(
-                        child: ImageNetworkExtended(
-                          //comment.avatarUrl
-                          "https://image.freepik.com/free-vector/businessman-character-avatar-icon-vector-illustration-design_24877-18271.jpg",
+                        child: CachedNetworkImage(
+                          imageUrl: "https://image.freepik.com/free-vector/businessman-character-avatar-icon-vector-illustration-design_24877-18271.jpg",
+                          placeholder: (context, url) => CircularProgressIndicator(),
+                          errorWidget: (context, url, error) => Icon(Icons.error),
                         ),
                       ),
                       onTap: (){
@@ -133,7 +134,6 @@ class ForumTile extends StatelessWidget{
                                 )
                               ],
                             ),
-
                           ),
                         ],
                       ),

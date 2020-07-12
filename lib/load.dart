@@ -11,7 +11,8 @@ import 'login.dart';
 import 'edit_profile.dart';
 import 'test.dart';
 import 'util_func.dart';
-
+import 'navigation.dart';
+import 'class.dart';
 
 class LoadPage extends StatelessWidget{
 
@@ -34,9 +35,9 @@ class LoadPage extends StatelessWidget{
     }
     context.read<GlobalModel>().user=user;
 
-    Map<String,Object> profile;
+    Profile profile;
     try{
-      profile=await getProfile(context,user.uid);
+      profile=await getProfile(user.uid);
     }catch(e){
       showErrorDialog(context, "プロフィールの取得に失敗しました。\n${e.toString()}");
       return null;
@@ -55,18 +56,18 @@ class LoadPage extends StatelessWidget{
 
       // プロフィール作成画面へ移動
       await Navigator.push(context, MaterialPageRoute(
-        builder: (context) => ChangeNotifierProvider<EditProfileModel>(
-          create: (context)=>EditProfileModel(),
-          child: EditProfilePage(),
-        ),
+        builder: (context) => EditProfilePage(),
       ));
     }
+
+
     //プロフィールが存在したので、
     context.read<GlobalModel>().myProfile=profile;
+
     // すべての準備が完了
     //　本画面へ移動
     Navigator.pushReplacement(context, MaterialPageRoute(
-      builder: (context) => TestPage(),
+      builder: (context) => NavigationPage(),
     ));
     return null;
 
